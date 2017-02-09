@@ -32,10 +32,10 @@ type Meta interface {
 	Name() string
 	Hash() string
 	Stat() MetaData
-	Children() <-chan Meta
+	Children() []Meta
 }
 
 type MetaStore interface {
-	Populate(entry Entry) error
+	// Populate(entry Entry) error
 	Get(name string) (Meta, bool)
 }

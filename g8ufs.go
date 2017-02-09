@@ -29,22 +29,22 @@ type Exec func(name string, arg ...string) Starter
 
 type Options struct {
 	//PList (required) to mount
-	PList string
+	PList     string
 	//PListTrim (optional) trim prefix of file paths
 	PListTrim string
 	//Backend (required) working directory where the filesystem keeps it's cache and others
 	//will be created if doesn't exist
-	Backend string
+	Backend   string
 	//Mount (required) is the mount point
-	Target string
+	Target    string
 	//MetaStore (optional) will use meta.NewMemoryMeta if not provided
-	MetaStore meta.MetaStore
+	MetaStore m.MetaStore
 	//Storage (required) storage to download files from
-	Storage storage.Storage
+	Storage   storage.Storage
 	//Reset if set, will wipe up the backend clean before mounting.
-	Reset bool
+	Reset     bool
 
-	Exec Exec
+	Exec      Exec
 }
 
 type G8ufs struct {
@@ -73,10 +73,10 @@ func Mount(opt *Options) (*G8ufs, error) {
 
 	metaStore := opt.MetaStore
 	if metaStore == nil {
-		metaStore = meta.NewMemoryMetaStore()
+		metaStore = m.NewMemoryMetaStore()
 	}
 
-	if err := meta.Populate(metaStore, opt.PList, rw, opt.PListTrim); err != nil {
+	if err := m.Populate(metaStore, opt.PList, rw, opt.PListTrim); err != nil {
 		return nil, err
 	}
 
