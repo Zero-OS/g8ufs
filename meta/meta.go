@@ -3,11 +3,24 @@ package meta
 import (
 	"fmt"
 	"github.com/op/go-logging"
+	"syscall"
 )
 
 var (
 	log         = logging.MustGetLogger("meta")
 	ErrNotFound = fmt.Errorf("not found")
+)
+
+type NodeType uint32
+
+const (
+	DirType         = NodeType(syscall.S_IFDIR)
+	RegularType     = NodeType(syscall.S_IFREG)
+	BlockDeviceType = NodeType(syscall.S_IFBLK)
+	CharDeviceType  = NodeType(syscall.S_IFCHR)
+	SocketType      = NodeType(syscall.S_IFSOCK)
+	FIFOType        = NodeType(syscall.S_IFIFO)
+	LinkType        = NodeType(syscall.S_IFLNK)
 )
 
 type MetaData struct {
@@ -26,12 +39,36 @@ type MetaData struct {
 	Inode       uint64
 }
 
+type MetaInfo struct {
+	//Common
+	CreationTime     uint32
+	ModificationTime uint32
+	ACL              string
+	Type             NodeType
+
+	//Specific Attr
+
+	//Link
+	LinkTarget string
+
+	//File
+	FileSize      uint64
+	FileBlockSize uint8
+
+	//Special
+	SpecialData string
+}
+
 type Meta interface {
 	fmt.Stringer
 	//base name
 	Name() string
 	Hash() string
-	Stat() MetaData
+	IsDir() bool
+
+	Stat() MetaData //deprecated
+	Info() MetaInfo
+
 	Children() []Meta
 }
 

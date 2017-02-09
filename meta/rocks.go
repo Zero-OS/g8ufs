@@ -34,7 +34,7 @@ type rocksMeta struct {
 	dir   np.Dir
 	inode np.Inode
 
-	store MetaStore
+	store *rocksMetaStore
 	o     sync.Once
 }
 
@@ -53,6 +53,11 @@ func (rm *rocksMeta) load() {
 			rm.inode = self.inode
 		}
 	})
+}
+
+func (rm *rocksMeta) IsDir() bool {
+	rm.load()
+	return !rm.inode.HasData()
 }
 
 func (rm *rocksMeta) String() string {
@@ -115,6 +120,38 @@ func (rm *rocksMeta) Children() []Meta {
 	return children
 }
 
+func (rm *rocksMeta) Info() MetaInfo {
+	rm.load()
+	if !rm.inode.HasData() {
+		//that must be a dir.
+		return MetaInfo{
+			Type:             DirType,
+			CreationTime:     rm.dir.CreationTime(),
+			ModificationTime: rm.dir.ModificationTime(),
+		}
+	}
+
+	info := MetaInfo{
+		CreationTime:     rm.inode.CreationTime(),
+		ModificationTime: rm.inode.ModificationTime(),
+	}
+
+	attrs := rm.inode.Attributes()
+	if attrs.HasFile() {
+		file, _ := attrs.File()
+		info.Type = RegularType
+		info.FileSize = file.Size()
+		info.FileBlockSize = file.BlockSize()
+	} else if attrs.HasLink() {
+		link, _ := attrs.Link()
+		info.Type = LinkType
+		target, _ := link.Target()
+		info.LinkTarget = target
+	}
+
+	return info
+}
+
 type rocksMetaStore struct {
 	ns    string
 	db    *rocksdb.DB
@@ -140,13 +177,40 @@ func (rs *rocksMetaStore) hash(namespace string, path string) (string, error) {
 	}
 }
 
-func (rs *rocksMetaStore) dirFromSlice(slice *rocksdb.Slice) (np.Dir, error) {
+func (rs *rocksMetaStore) dirFromSlice(slice *rocksdb.Slice) np.Dir {
 	msg, err := capnp.NewDecoder(bytes.NewBuffer(slice.Data())).Decode()
 	if err != nil {
-		fmt.Errorf("invalid capnp message")
+		log.Fatal("invalid capnp Dir message")
 	}
 
-	return np.ReadRootDir(msg)
+	dir, err := np.ReadRootDir(msg)
+	if err != nil {
+		log.Fatal("failed to read Dir message")
+	}
+
+	return dir
+}
+
+func (rs *rocksMetaStore) aciFromSlice(slice *rocksdb.Slice) np.ACI {
+	msg, err := capnp.NewDecoder(bytes.NewBuffer(slice.Data())).Decode()
+	if err != nil {
+		log.Fatal("invalid capnp ACI message")
+	}
+
+	aci, err := np.ReadRootACI(msg)
+	if err != nil {
+		log.Fatal("failed to read ACI messeage")
+	}
+	return aci
+}
+
+func (rs *rocksMetaStore) getACI(key string) np.ACI {
+	slice, err := rs.db.Get(rs.ro, key)
+	if err != nil {
+		log.Fatalf("failed to get ACI (%s) from db: %s", key, err)
+	}
+
+	return rs.aciFromSlice(slice)
 }
 
 func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
@@ -158,17 +222,13 @@ func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
 	}
 
 	hash, _ := rs.hash(rs.ns, name)
-	fmt.Println("hash: ", hash)
 	slice, err := rs.db.Get(rs.ro, []byte(hash))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if slice.Size() != 0 {
-		dir, err := rs.dirFromSlice(slice)
-		if err != nil {
-			log.Fatal(err)
-		}
+		dir := rs.dirFromSlice(slice)
 
 		return &rocksMeta{
 			store: rs,

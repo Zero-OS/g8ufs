@@ -13,8 +13,7 @@ struct File {
 }
 
 struct Link {
-    destDirKey  @0: Text;          # key of dir in which destination is
-    destName    @1: Text;
+    target @0: Text;          # path to target
 }
 
 struct Special {
@@ -75,7 +74,6 @@ struct UserGroup {
     iyoId  @1: Text;    # itsyou.online id
     iyoInt @2: UInt64;  # itsyouonline unique id per user or group, is globally unique
 }
-
 
 struct ACI {
     # for backwards compatibility with posix

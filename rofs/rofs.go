@@ -80,7 +80,7 @@ func (fs *filesystem) OpenDir(name string, context *fuse.Context) ([]fuse.DirEnt
 		return nil, fuse.ENOENT
 	}
 	var entries []fuse.DirEntry
-	for child := range m.Children() {
+	for _, child := range m.Children() {
 		stat := child.Stat()
 		mode := syscall.S_IFREG
 		if stat.IsDir {
