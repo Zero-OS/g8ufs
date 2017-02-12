@@ -9,11 +9,10 @@ struct File {
     # max blocksize = 128 MB
     blockSize   @0: UInt8;
     blocks      @1: List(Data);    # list of the hashes of the blocks
-    size        @2: UInt64;        # in bytes
 }
 
 struct Link {
-    target @0: Text;          # path to target
+    target @0: Text;  # Path to target
 }
 
 struct Special {
@@ -35,22 +34,23 @@ struct Special {
 }
 
 struct SubDir {
-    key  @0: Text;
+    key  @0: Text;    # Key ID of the subdirectory
 }
 
 struct Inode {
     name    @0: Text;
+    size    @1: UInt64;           # in bytes
 
     attributes: union {
-        dir     @1: SubDir;
-        file    @2: File;
-        link    @3: Link;
-        special @4: Special;
+        dir     @2: SubDir;
+        file    @3: File;
+        link    @4: Link;
+        special @5: Special;
     }
 
-    aclkey           @5: UInt32; # is pointer to ACL
-    modificationTime @6: UInt32;
-    creationTime     @7: UInt32;
+    aclkey           @6: Text;    # is pointer to ACL # FIXME: need to be int
+    modificationTime @7: UInt32;
+    creationTime     @8: UInt32;
 }
 
 struct Dir {
@@ -63,10 +63,9 @@ struct Dir {
     # directory's metadata
 
     size             @4: UInt64;  # in bytes
-    aclkey           @5: UInt32;  # is pointer to ACL
-    isLink           @6: Bool;    # if is link and not physically on disk
-    modificationTime @7: UInt32;
-    creationTime     @8: UInt32;
+    aclkey           @5: Text;    # is pointer to ACL # FIXME: need to be int
+    modificationTime @6: UInt32;
+    creationTime     @7: UInt32;
 }
 
 struct UserGroup {
@@ -74,6 +73,7 @@ struct UserGroup {
     iyoId  @1: Text;    # itsyou.online id
     iyoInt @2: UInt64;  # itsyouonline unique id per user or group, is globally unique
 }
+
 
 struct ACI {
     # for backwards compatibility with posix

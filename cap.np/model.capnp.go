@@ -15,12 +15,12 @@ type File struct{ capnp.Struct }
 const File_TypeID = 0xecfda38634f4591a
 
 func NewFile(s *capnp.Segment) (File, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 1})
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1})
 	return File{st}, err
 }
 
 func NewRootFile(s *capnp.Segment) (File, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 1})
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1})
 	return File{st}, err
 }
 
@@ -67,20 +67,12 @@ func (s File) NewBlocks(n int32) (capnp.DataList, error) {
 	return l, err
 }
 
-func (s File) Size() uint64 {
-	return s.Struct.Uint64(8)
-}
-
-func (s File) SetSize(v uint64) {
-	s.Struct.SetUint64(8, v)
-}
-
 // File_List is a list of File.
 type File_List struct{ capnp.List }
 
 // NewFile creates a new list of File.
 func NewFile_List(s *capnp.Segment, sz int32) (File_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 16, PointerCount: 1}, sz)
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1}, sz)
 	return File_List{l}, err
 }
 
@@ -392,12 +384,12 @@ func (w Inode_attributes_Which) String() string {
 const Inode_TypeID = 0xc0029f81b3eee594
 
 func NewInode(s *capnp.Segment) (Inode, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 2})
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 24, PointerCount: 3})
 	return Inode{st}, err
 }
 
 func NewRootInode(s *capnp.Segment) (Inode, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 2})
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 24, PointerCount: 3})
 	return Inode{st}, err
 }
 
@@ -430,10 +422,18 @@ func (s Inode) SetName(v string) error {
 	return s.Struct.SetText(0, v)
 }
 
+func (s Inode) Size() uint64 {
+	return s.Struct.Uint64(0)
+}
+
+func (s Inode) SetSize(v uint64) {
+	s.Struct.SetUint64(0, v)
+}
+
 func (s Inode) Attributes() Inode_attributes { return Inode_attributes(s) }
 
 func (s Inode_attributes) Which() Inode_attributes_Which {
-	return Inode_attributes_Which(s.Struct.Uint16(0))
+	return Inode_attributes_Which(s.Struct.Uint16(8))
 }
 func (s Inode_attributes) Dir() (SubDir, error) {
 	p, err := s.Struct.Ptr(1)
@@ -441,7 +441,7 @@ func (s Inode_attributes) Dir() (SubDir, error) {
 }
 
 func (s Inode_attributes) HasDir() bool {
-	if s.Struct.Uint16(0) != 0 {
+	if s.Struct.Uint16(8) != 0 {
 		return false
 	}
 	p, err := s.Struct.Ptr(1)
@@ -449,14 +449,14 @@ func (s Inode_attributes) HasDir() bool {
 }
 
 func (s Inode_attributes) SetDir(v SubDir) error {
-	s.Struct.SetUint16(0, 0)
+	s.Struct.SetUint16(8, 0)
 	return s.Struct.SetPtr(1, v.Struct.ToPtr())
 }
 
 // NewDir sets the dir field to a newly
 // allocated SubDir struct, preferring placement in s's segment.
 func (s Inode_attributes) NewDir() (SubDir, error) {
-	s.Struct.SetUint16(0, 0)
+	s.Struct.SetUint16(8, 0)
 	ss, err := NewSubDir(s.Struct.Segment())
 	if err != nil {
 		return SubDir{}, err
@@ -471,7 +471,7 @@ func (s Inode_attributes) File() (File, error) {
 }
 
 func (s Inode_attributes) HasFile() bool {
-	if s.Struct.Uint16(0) != 1 {
+	if s.Struct.Uint16(8) != 1 {
 		return false
 	}
 	p, err := s.Struct.Ptr(1)
@@ -479,14 +479,14 @@ func (s Inode_attributes) HasFile() bool {
 }
 
 func (s Inode_attributes) SetFile(v File) error {
-	s.Struct.SetUint16(0, 1)
+	s.Struct.SetUint16(8, 1)
 	return s.Struct.SetPtr(1, v.Struct.ToPtr())
 }
 
 // NewFile sets the file field to a newly
 // allocated File struct, preferring placement in s's segment.
 func (s Inode_attributes) NewFile() (File, error) {
-	s.Struct.SetUint16(0, 1)
+	s.Struct.SetUint16(8, 1)
 	ss, err := NewFile(s.Struct.Segment())
 	if err != nil {
 		return File{}, err
@@ -501,7 +501,7 @@ func (s Inode_attributes) Link() (Link, error) {
 }
 
 func (s Inode_attributes) HasLink() bool {
-	if s.Struct.Uint16(0) != 2 {
+	if s.Struct.Uint16(8) != 2 {
 		return false
 	}
 	p, err := s.Struct.Ptr(1)
@@ -509,14 +509,14 @@ func (s Inode_attributes) HasLink() bool {
 }
 
 func (s Inode_attributes) SetLink(v Link) error {
-	s.Struct.SetUint16(0, 2)
+	s.Struct.SetUint16(8, 2)
 	return s.Struct.SetPtr(1, v.Struct.ToPtr())
 }
 
 // NewLink sets the link field to a newly
 // allocated Link struct, preferring placement in s's segment.
 func (s Inode_attributes) NewLink() (Link, error) {
-	s.Struct.SetUint16(0, 2)
+	s.Struct.SetUint16(8, 2)
 	ss, err := NewLink(s.Struct.Segment())
 	if err != nil {
 		return Link{}, err
@@ -531,7 +531,7 @@ func (s Inode_attributes) Special() (Special, error) {
 }
 
 func (s Inode_attributes) HasSpecial() bool {
-	if s.Struct.Uint16(0) != 3 {
+	if s.Struct.Uint16(8) != 3 {
 		return false
 	}
 	p, err := s.Struct.Ptr(1)
@@ -539,14 +539,14 @@ func (s Inode_attributes) HasSpecial() bool {
 }
 
 func (s Inode_attributes) SetSpecial(v Special) error {
-	s.Struct.SetUint16(0, 3)
+	s.Struct.SetUint16(8, 3)
 	return s.Struct.SetPtr(1, v.Struct.ToPtr())
 }
 
 // NewSpecial sets the special field to a newly
 // allocated Special struct, preferring placement in s's segment.
 func (s Inode_attributes) NewSpecial() (Special, error) {
-	s.Struct.SetUint16(0, 3)
+	s.Struct.SetUint16(8, 3)
 	ss, err := NewSpecial(s.Struct.Segment())
 	if err != nil {
 		return Special{}, err
@@ -555,28 +555,39 @@ func (s Inode_attributes) NewSpecial() (Special, error) {
 	return ss, err
 }
 
-func (s Inode) Aclkey() uint32 {
-	return s.Struct.Uint32(4)
+func (s Inode) Aclkey() (string, error) {
+	p, err := s.Struct.Ptr(2)
+	return p.Text(), err
 }
 
-func (s Inode) SetAclkey(v uint32) {
-	s.Struct.SetUint32(4, v)
+func (s Inode) HasAclkey() bool {
+	p, err := s.Struct.Ptr(2)
+	return p.IsValid() || err != nil
+}
+
+func (s Inode) AclkeyBytes() ([]byte, error) {
+	p, err := s.Struct.Ptr(2)
+	return p.TextBytes(), err
+}
+
+func (s Inode) SetAclkey(v string) error {
+	return s.Struct.SetText(2, v)
 }
 
 func (s Inode) ModificationTime() uint32 {
-	return s.Struct.Uint32(8)
-}
-
-func (s Inode) SetModificationTime(v uint32) {
-	s.Struct.SetUint32(8, v)
-}
-
-func (s Inode) CreationTime() uint32 {
 	return s.Struct.Uint32(12)
 }
 
-func (s Inode) SetCreationTime(v uint32) {
+func (s Inode) SetModificationTime(v uint32) {
 	s.Struct.SetUint32(12, v)
+}
+
+func (s Inode) CreationTime() uint32 {
+	return s.Struct.Uint32(16)
+}
+
+func (s Inode) SetCreationTime(v uint32) {
+	s.Struct.SetUint32(16, v)
 }
 
 // Inode_List is a list of Inode.
@@ -584,7 +595,7 @@ type Inode_List struct{ capnp.List }
 
 // NewInode creates a new list of Inode.
 func NewInode_List(s *capnp.Segment, sz int32) (Inode_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 16, PointerCount: 2}, sz)
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 24, PointerCount: 3}, sz)
 	return Inode_List{l}, err
 }
 
@@ -634,12 +645,12 @@ type Dir struct{ capnp.Struct }
 const Dir_TypeID = 0x8a228653b964fd48
 
 func NewDir(s *capnp.Segment) (Dir, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 24, PointerCount: 4})
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 5})
 	return Dir{st}, err
 }
 
 func NewRootDir(s *capnp.Segment) (Dir, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 24, PointerCount: 4})
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 5})
 	return Dir{st}, err
 }
 
@@ -743,36 +754,39 @@ func (s Dir) SetSize(v uint64) {
 	s.Struct.SetUint64(0, v)
 }
 
-func (s Dir) Aclkey() uint32 {
-	return s.Struct.Uint32(8)
+func (s Dir) Aclkey() (string, error) {
+	p, err := s.Struct.Ptr(4)
+	return p.Text(), err
 }
 
-func (s Dir) SetAclkey(v uint32) {
-	s.Struct.SetUint32(8, v)
+func (s Dir) HasAclkey() bool {
+	p, err := s.Struct.Ptr(4)
+	return p.IsValid() || err != nil
 }
 
-func (s Dir) IsLink() bool {
-	return s.Struct.Bit(96)
+func (s Dir) AclkeyBytes() ([]byte, error) {
+	p, err := s.Struct.Ptr(4)
+	return p.TextBytes(), err
 }
 
-func (s Dir) SetIsLink(v bool) {
-	s.Struct.SetBit(96, v)
+func (s Dir) SetAclkey(v string) error {
+	return s.Struct.SetText(4, v)
 }
 
 func (s Dir) ModificationTime() uint32 {
-	return s.Struct.Uint32(16)
+	return s.Struct.Uint32(8)
 }
 
 func (s Dir) SetModificationTime(v uint32) {
-	s.Struct.SetUint32(16, v)
+	s.Struct.SetUint32(8, v)
 }
 
 func (s Dir) CreationTime() uint32 {
-	return s.Struct.Uint32(20)
+	return s.Struct.Uint32(12)
 }
 
 func (s Dir) SetCreationTime(v uint32) {
-	s.Struct.SetUint32(20, v)
+	s.Struct.SetUint32(12, v)
 }
 
 // Dir_List is a list of Dir.
@@ -780,7 +794,7 @@ type Dir_List struct{ capnp.List }
 
 // NewDir creates a new list of Dir.
 func NewDir_List(s *capnp.Segment, sz int32) (Dir_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 24, PointerCount: 4}, sz)
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 16, PointerCount: 5}, sz)
 	return Dir_List{l}, err
 }
 
@@ -1086,97 +1100,96 @@ func (p ACI_Right_Promise) Struct() (ACI_Right, error) {
 	return ACI_Right{s}, err
 }
 
-const schema_ae9223e76351538a = "x\xda\xa4U_l\x14\xd5\x17>\xdf\xbd3;\xddd" +
-	"\xcb\xee\xfcfI\x81\xd0\xec\x0f~\xfd%\xda\xd0\x8a\x05" +
-	"\x13\xd2\x90,\"*%\x10\xb9,<`x`\xba;" +
-	"m\x87nw\xd7\xddY\xb1\xc4\xa6@\x80Hcb$" +
-	"\xf8'\x06#Qb|0\x92\xa0>\xa0!\xea\xab\x0f" +
-	"<\xf0\xa4\x06\x1e\x88\xd6\xaa\x11\xa2\x11\xa3&\xe0\x983" +
-	"\xbb;\xb3]\xfaf\x9fv\xbe{\xee9\xdf9\xe7\xbb" +
-	"_\xd7\xf7\xc8-\xe2a\xfd!\x9dHm\xd6c\xfe\x91" +
-	"k\xbb\x9e\xfa\xea\xda\xd0i2\xd3\xc2\x9f\xdc<q\xf5" +
-	"\xb5\xf7\xbc\xebD\xb0f\xc4\x97\xd6ia\x10Y'\xc5" +
-	",\xc1\xdf~\xafp9wj\xed\x1c\xa9\x04\xa4?\x97" +
-	"S\xf9\x85\xff\x9d\xf9\x80t\x8dC\xae\x88\xe3\xd6\x17\x1c" +
-	"\xbc\xe1\x8a\xf0A\xf8\xe3\x06~\xbb\xba\xe6\xc2\x053\x81" +
-	"\xb6Pp\xe8M\xed\x0d\xeb\xc7\xe0\xd2\xbc\x96%\xf8\xd6" +
-	"\xf5\xb5\xef\xf7%>\xb9H\xea?\x10\xfe\xd9\xf9\xdb\x1f" +
-	"\x1e{K|N\xfb\x84\x01\x8d\xc8\xd2\xf5\x9f\x08V\\" +
-	"_ D\x87*\x01\xd1\x967`yC?c\xcd\xeb" +
-	"L\xe1\xa6\x9e\x01!jF%p\x1f\x8b\xf9\xd8\xdb\xd6" +
-	"\xadX\x0f\x91\xf5{\xec0\xc1?\xf0\xaa\xfd\xee\xfc\xf9" +
-	"\x95\xdf\xd1\x12\x8c\x951g\xed7\xf8\xd7>\x83\x19\xbf" +
-	"\xf4\xed\xe4\xc2\xae\x97\x97\x7fO*\x05\xf8\xe7>\xfbf" +
-	"\xf9\xd9W>Zh\x06\xd7\x8dK\xd6L\x10<mp" +
-	"\xe2\xf0\xb8\x83\x85\xe4\x90\xaf\x8d\xe3\xd6\x0d\xa3\x87h\xc3" +
-	"\xbc\x11p^\xb5\xff\xce\xc6S\xef\xdc\xfb\xb9\xb3\xc3 " +
-	"\xb5\x1e\x9f\xb3\xba\xe3\xfc+\x1e\xbfH\xf0\x87?=\xd7" +
-	";\xda\xb3\xe7vg\xea`\x1c\x1f\xc7/YW\x82\xe0" +
-	"\xcb\xf1\x8b4\xe0O\x95\x0bNq0o\x8bJ\xa92" +
-	"\x9c\xab8y\xd7.\x0e\xee\x9d\xae8D\xbb\x01\x95\x86" +
-	" 2\x1f\x19&\x02\xcc\x81!\"\x08\xf3\xff[\x89 " +
-	"\xcd\xde\x1dD\xd0\xcc\x95[\x89\xb2\xb5r~\xd2\xf12" +
-	"\xa3\xc5r~r6?aW\x0b\xce\xb3\xfe\x98;V" +
-	"\xae\xb8\x9c\x89f\xeb\xa5\xc9R\xf9p),\x07.\xb7" +
-	"\xcd\xad\x06E\xfa\xa4F\xa4\x81\xc8\xbc\xd5O\xa4~\x90" +
-	"Pw\x04L \x0d\x06\x7f\xddA\xa4~\x91Pw\x05" +
-	"L!\x1a\x94\xfeb\xf0O\x89\\\x1a\x02\xa6\x94iH" +
-	"\"\xcb\xc40Q.\x01\x89\xdc\x0a\x08@K\x07bY" +
-	"\x8e~\xa2\\\x8a\xe1\xd5\x1c\xae\x8b4t\"ke\x10" +
-	"\x9ef\xfc\xbf\x8c\xc7\x0e\xa6\x11#\xb2z\x03|\x05\xe3" +
-	"}\x8c\x1bZ:\x98\xf4\x1a\xcc\x11\xe5\xfa\x18_\xcfx" +
-	"\x97\x9eF\x17\x915\x80CD\xb9u\x8co\x82@\xb2" +
-	"dO9H\x90@\x82\xe0\x17\xcby\xdbs\xcb%\"" +
-	"\x0a\xb1|\xb9\xe49%\xaf\xc6\xd82\xc2n\x09\xa4\"" +
-	"\x19\x13\x18\xccV\xec\xaaS\xf2Zw\x925\xf7\x88\x83" +
-	"8\x09\xc4\x09Y;_\x9ct\xa6\xd1E\x02]\x84\xac" +
-	"[\xdb\xe9\x96&\x01\x12`\xb9L\x95\x0b\xee\x98\x9b\xb7" +
-	"\xc1u\xf7\xbaS\x0eQ+\xd4\xcfW\x9d\x06\x9d$\x1f" +
-	"\x84\xf0\xa2\xc5\xe4\xea\xa3\xdb\xa4[\xe5\xddh\xe1n\xba" +
-	"\xd7\x12\xa9.\x09\x95\x160\xb8x\xab\x99E\x12\x1a)" +
-	"\x95\x0b\xce\xa0\xedyUw4Y\xf7\x9c\x9aJIm" +
-	"\xb5\xef7wis\x92\x03\x12jB\xa0\x17\x7f3\xcc" +
-	"\xdbtx\xef\x07%TQ\xa0W\xdccX\x12\x99." +
-	"\xc3\x05\x09U\x11\xe8\x95w\x19\xd6\x88\xcc\xa9\xadDj" +
-	"BBy\x02F\xc1\xad\"\xd5\xf2\x15\x02R\x84\xe4\x98" +
-	"[t\x90\x8a^M\x13.\xf2\x8cR\xd1\x9bn\xc0\xb3" +
-	"\xb5\x86\xea\x91j\xf79>Y<\x14\xee\x0cN\xf0(" +
-	"\xc2\x99\xcc0\xc1\xe7$\xd4\x09\x01\xfe\x8b\\\xcb<\xf6" +
-	"4\x09S \x10\x9a95\x1c16\xa5\x08Tf>" +
-	"3G\xa4<\x09uT\xc0\xd4d 1s\xe6\x10\x91" +
-	"z^B\xbd\xd0\xa9\xa3\xc6L\xeb\x1eI\xa7\xd6\xb1\xff" +
-	"\x7f\xbf\xf0\x8a\x937\\\xbb\xa84\xa0\xcd\xfa\xd1\x9fd" +
-	"+P]a\xc3\x0fr\xc3}\x12j=7\xdc\xd8\xe9" +
-	"\x00c\x0fH\xa8\x8d\x02Io\xba\xe2 \x19\xe5  " +
-	"IH\x16l\xcfF7\x09tw\x96f\xe16\xbc\xa6" +
-	"Mj\xc3\x91\xd4\xb2\x9e]\x1dw\xbc\xfb\xd4\x16\\~" +
-	"\xf4\xb1\x91\xc1\xcc\x1ew|\xc2\xe3\x04m4\x87\x96\xa0" +
-	"9J\xa4\xd6I\xa8M\x02\x99*\xdf\x09s\xd6kN" +
-	"u\xbcZ\xae\x93Qq\x0b0H\xc0X\xa2\x12\x05\xd3" +
-	"\x09]\xde\xc4P\xa3t\xbb\x1e\x86\"=\x84\xfeul" +
-	"(Z)\x9a\xf6u\x92gvTB\xbd\xd8\x14\x04\xcb" +
-	"\xfd4\xb7}BB\x9dgA4\xc5\xfe\xe6*\"\xf5" +
-	"\xba\x84\xba \x90\xa9\xb7+\"3\xde\xfe\x95d\xba-" +
-	"\xee\xd9\xa0\xbfZ\xe4-!\xeb\x86\xb7H\xb7\xb0\xb4\x10" +
-	"\x9ep\x8bM\xe7O\x84M=\xbe\x87Hm\x93P\xbb" +
-	"\xa3a\xeeb\xaa\xdb%T\x81=\xb9\xf9\x8a\xed\xfe\xe8" +
-	"q\xfb\xc1\xff\x82\x9c{\x84\xe0 F\x021B6\xc0" +
-	"BV,\x87e\x1d\xc6\xb6\x98\xcd\xbe\x9aS\xcd<Y" +
-	"-\xd7+\x1d\x8c\xb8\xd0\x16\x09\xb5\xb3m\xcc#Cm" +
-	"4\x9bc\x0ei\xee\xedxM\x19w\xba<Rh}" +
-	"e\xf9\xab\xe4\xb5H\xfc\x13\x00\x00\xff\xff4O\x0c\xe1"
+const schema_ae9223e76351538a = "x\xda\xacVo\x88T\xd5\x1b~\x9fs\xee\xfcY\x98" +
+	"u\xe6\xfe\xee\x88\x7f\xf8-SVP\xd2n\xba*\xd4" +
+	"`\x8c\x9a\x95+J\x9e\x1d%\x0a?tw\xe6\xee\xee" +
+	"ufg\x86;w\xb2\x95dSTt)B\xd9\xfe" +
+	"\xa2\xa4\xe5\x86~\xa8\xc0\xfa\x12!\xd5\xa7(JP\x0a" +
+	"$4\x82\xb2\x85\x08\x092Rp\xbb\xf1\xce\xdd\xbdw" +
+	"v\xda\x8f}\xbb\xf7\xb9\xefy\x9f\xe7<\xef\xfb\x9es" +
+	"W\xc4\xe5:\xb12\xf2@\x84H\xad\x8dD\xbd=\x97" +
+	"\xb6>q\xf9R\xef\x11\xd2\xd3\xc2+\xad\x1d\xbe\xf0\xda" +
+	"\x19\xf7\x0a\x11\x8c\xbd\xe2+\xe3\x88\x88\x11\x19\x07\xc5\x18" +
+	"\xc1\xdb4]\xfc8\x7fh\xd98\xa9\x04\x847\x9eW" +
+	"\x85\xa9\xbb\x8e\xbdO\x91\x08\x87\x9c\x17\xfb\x8d\xcf9x" +
+	"\xd5y\xf1\x05\x08\x7f]\xc5\x1f\x17\xee<}ZO\xa0" +
+	"%\x14\x1c:\xa9\xbdi\xbc\xa7\xf1\xd3Y-G\xf0&" +
+	"\xae]\xffp\xdf[\xe23\xce+[\x82%\x87|\xa9" +
+	"\x1d3.r\xf0\xaao\xb4'A\x08\x15\xaa\x04\xfe\x95" +
+	"\xba3\xfa\xb6\xb10\xba\x88\xc8\xe8\x8a\xee&x;_" +
+	"5\xdf\xbdvr\xc9\xcf4\x8f\x8c\xd1\xe8\xb8\xb1/\xca" +
+	"O{\xa3,\xe3\xe5\x9fJS[\x8f.\xfc\x85T\x0a" +
+	"\xf0\x8e\x7f\xfa\xfd\xc2\x89W>\x9a\x9a\x09>\x11=g" +
+	"L6\x83O5\x13\x07\x9f\xdbT45#\xb6\xdf\x88" +
+	"\xc4\x16\x11\xad\xea\x8ceX\xf3\xd2\xa7n\xac>\xf4\xce" +
+	"\xf4o\xf3j\xee\x8e\x8f\x1bk\xe2\xfc\xb42\xce\xa9\xb3" +
+	"\x9f\x1c\xef\x1aX\xd4\x7f\xbd=\xb8Y\x89S\xf1s\xc6" +
+	"\xd9f\xf0d\xfc\x03\x82\x97\xf8![{\xa8Q\xbfE" +
+	"\xea\x7f\x90\xa1\x93;d\x0c\x1a4\xe3\xe1\x8e_\x09\xc6" +
+	"\xfa\x8e)\xea\xf6F\xaaE\xab\xdcS0E\xadR\xcb" +
+	"\xe6kV\xc16\xcb=\xdbGk\x16\xd16@\xa5!" +
+	"\x88\xf45Y\"@\xef\xee%\x82\xd0\xef\xd9@\x04\xa9" +
+	"wm&\x82\xa6/\xd9@\x94\xabW\x0b%\xcb\xcd\x0c" +
+	"\x94\xab\x85\xd2Xa\xd8t\x8a\xd6\xb3\xde\xa0=X\xad" +
+	"\xd9\x9c\x89\xc6\x1a\x95R\xa5\xba\xbb\x12\xd0\x81\xe96\xda" +
+	"N\x93\xe4\x0e\xa9\x11i \xd2/.'R_K\xa8" +
+	"\xcb\x02:\x90\x06\x83\xdfm&R\xdfJ\xa8\x1f\x05t" +
+	"!|IW\x19\xbc\"\xa1n\x0a\xe8R\xa6!\x89\xf4" +
+	"?\xb3D\xeaw\x09u[\x00Z\x1a\x1a\x91~\x8bS" +
+	"\xde\x90\xe8\x87\x80\x1e\xd1\xd2\x88\x10\xe9\xd3\x1cxS\"" +
+	"\xaf1\x1a\x15iD\xb9B\x18'\xcak\x90\xc8\xa7\x18" +
+	"\x8f\xc9\xb4\xdf?\xd8E\x94O0\xbe\x18\x02\xc9\x8a9" +
+	"b!A\x02\x09\x82W\xae\x16L\xd7\xaeV\x88(\xc0" +
+	"\x0a\xd5\x8akU\xdc:c\x0b\x08\xdb$\x90\x0a\xcb@" +
+	"`0W3\x1d\xab\xe2\xce\xaeI\xd6\xed=\x16:H" +
+	"\xa0\x83\x903\x0b\xe5\x925\x1a\xe4\x1b\xa9\x16\xedA\xbb" +
+	"`\x82\x89\xb6\xdb#\x16\x11\xe2$\x10g.\xc7\xf2\xf9" +
+	"\x93\xfc!\x80\xe7\x18\x9do\x0cl\x94\xb6\xc3^k\x81" +
+	"\xd7\x9d\xcb\x88T\\B\xa5\x05bml\xe1\xd2\xbeJ" +
+	"\xb5\x08\x8bW.\x0eV\xbe\xc1\x96NH\xa8\x93\x02\xb3" +
+	"E:\xc1\xd8\xeb\x12\xea\xb4\x00\x04ZzP?\xf54" +
+	"\x09]\xfa\x1e\xeb/\xb1\xf3\x87%\xd4\x84\x80\xae\xf9\x06" +
+	"\xebG\xc7\xc3\x84\xcd\x1a\xc59\xe3.\"u\\B\x9d" +
+	"i\xb3|\x8eU\x9e\xe9\xba\x8e=\xd0pIZ\xf5\xff" +
+	"\xdc\xb7\x9aU\x88\xd9fYi@\xcb\x89\x88\xe5I\x9e" +
+	"\x10\x15\x0f\x1c\xb9\x8fw\x7f\xb7\x84Z\x11:\xd2\xcd\xd8" +
+	"\xbd\x12j\xb5@\xd2\x1d\xadYH\x869\x08H\x12\x92" +
+	"E\xd35\xd1I\x02\x9d\xed\xd4[\xecJ\xc9\x1f\xc1\x96" +
+	"\x8ae\xc3\x8a\xe5\\\xd3\x19\xb2\xdc\xf9\x8b\xb6\xfe\x91\xbe" +
+	"\x9eL\xbf=4\xecr\x82\x16\x99\xbd\xf3\xc8\x1c R" +
+	"\xf7K\xa8\x07\x052\x0e\xaf\x09r6\xea\x963\xe4T" +
+	"\x1b\x14\xab\xd9E\xc4H 6\x0f\x135\xdd\x09\xceI" +
+	"\x1d\xbd>\xb5J\x07\xbc{\x99\xf79\x09u\xa0e\xac" +
+	"\xf71\xf8\xbc\x84:\xcc\x1d\xe3O\xf5A\xf6\xec\x05\x09" +
+	"\xf5\"O\xb5\xf0\xa7\xfa\x08o\xfb\xc0Lwh\xf0\xc7" +
+	"\xfa\xc4\xd2\xb0\xdf2\x8d\xd6\xf6\xc8\x0c\xcdi\x16\x96;" +
+	"\xab=\xd7\xdc_=\x9c\xc9@\xb5?\x93\xd2.\xce\xdf" +
+	"\x08\x8f\xd9\xe5\x99\x03\xb1\xc5\xcc\xfe\xb0\xbe\xb3{Z\x99" +
+	"\x9d1s\x93\x80\xd7<\x0d\xf3\xf6\x1e\x82\x85(\x09D" +
+	"\x09\xb9&\x16\x08\xe0\xca/h\xe7\xdaQ\xb7\x9c\xcc\xe3" +
+	"N\xb5Qc\xbeD\xc0\xf7({\xb3NBmi1" +
+	"\xb1\x8fM\xdc(\xa1\xb6\x85&ne\x11\x9b$\xd4\xf6" +
+	"\xb6\xc1\xc9\xd8\xa3\xd5\xbe\xe2\xec[\x8e\xdf*n0H" +
+	"sn\x02\x1e{\xab\xc7\x9f\xadd\xc3\xb5\xea*%\xb5" +
+	"\xff{\x1e|\x0a\x93\xcf\x8e\x9d\x12jX\xa0\x0b\x7f3" +
+	"\xcc\x95\xb2X\xe23\x12\xaa,\xd0%\xa6\xbd\x99Z\xd9" +
+	"\x0c\x17%TM\xa0K\xdef\x98\x0f\xe1\x91\x0dDj" +
+	"XB\xb9\x02\xb1\xa2\xed 5\xfb{@@\x8a\x90\x1c" +
+	"\xb4\xcb\x16R\xe1=9\x03\x97\xedJ\x09\xa9\xf0\x16\xf7" +
+	"\xe1\xb1\xba\x7fy!\xd5\xfa\xbb\xc2_\xfe\x09\x00\x00\xff" +
+	"\xff\x08~\x0b\x1f"
 
 func init() {
 	schemas.Register(schema_ae9223e76351538a,
 		0x8932d2d84f4dd27a,
 		0x8a228653b964fd48,
 		0xa4a421ce00f301dd,
-		0xafba0c24ac22dc13,
 		0xc0029f81b3eee594,
 		0xdc74a897ce683c6b,
 		0xe419a0e5a661965c,
 		0xe615914de76be38f,
 		0xe7b4959415dabf9c,
 		0xecfda38634f4591a,
-		0xee5217621d9cbb3a)
+		0xee5217621d9cbb3a,
+		0xf9737539703ade0c)
 }

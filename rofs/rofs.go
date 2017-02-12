@@ -99,6 +99,18 @@ func (fs *filesystem) Access(name string, mode uint32, context *fuse.Context) fu
 	return fuse.OK
 }
 
+func (fs *filesystem) Readlink(name string, context *fuse.Context) (string, fuse.Status) {
+	log.Debugf("Readlink %s", name)
+	m, ok := fs.store.Get(name)
+	if !ok {
+		return "", fuse.ENOENT
+	}
+
+	info := m.Info()
+
+	return info.LinkTarget, fuse.OK
+}
+
 func (fs *filesystem) GetXAttr(name string, attr string, context *fuse.Context) ([]byte, fuse.Status) {
 	return nil, fuse.ENOSYS
 }
