@@ -7,7 +7,6 @@ import (
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
 	"github.com/op/go-logging"
-	"syscall"
 )
 
 var (
@@ -36,23 +35,23 @@ func (fs *filesystem) GetAttr(name string, context *fuse.Context) (*fuse.Attr, f
 	log.Debugf("GetAttr %s", name)
 	m, ok := fs.store.Get(name)
 	if !ok {
-
+		log.Debugf("'%s' not found (%s)", name)
 		return nil, fuse.ENOENT
 	}
 
-	stat := m.Stat()
+	info := m.Info()
 
-	mode := syscall.S_IFREG
-
-	if stat.IsDir {
-		mode = syscall.S_IFDIR
+	log.Debugf("file '%s' of type '%s'", name, info.Type)
+	if info.Type == meta.UnknownType {
+		return nil, fuse.ENOSYS
 	}
 
+	mode := uint32(info.Type)
+
 	return &fuse.Attr{
-		Ino:   stat.Inode,
-		Size:  stat.Size,
-		Mtime: stat.Mtime,
-		Mode:  uint32(mode) | stat.Permissions,
+		Size:  info.FileSize,
+		Mtime: uint64(info.ModificationTime),
+		Mode:  mode | 0755,
 	}, fuse.OK
 }
 
@@ -81,14 +80,10 @@ func (fs *filesystem) OpenDir(name string, context *fuse.Context) ([]fuse.DirEnt
 	}
 	var entries []fuse.DirEntry
 	for _, child := range m.Children() {
-		stat := child.Stat()
-		mode := syscall.S_IFREG
-		if stat.IsDir {
-			mode = syscall.S_IFDIR
-		}
-
+		info := child.Info()
+		log.Debugf("child '%s', type: %s", child.Name(), info.Type)
 		entries = append(entries, fuse.DirEntry{
-			Mode: uint32(mode),
+			Mode: uint32(info.Type),
 			Name: child.Name(),
 		})
 	}

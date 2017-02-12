@@ -28,23 +28,19 @@ type Starter interface {
 type Exec func(name string, arg ...string) Starter
 
 type Options struct {
-	//PList (required) to mount
-	PList     string
-	//PListTrim (optional) trim prefix of file paths
-	PListTrim string
 	//Backend (required) working directory where the filesystem keeps it's cache and others
 	//will be created if doesn't exist
-	Backend   string
+	Backend string
 	//Mount (required) is the mount point
-	Target    string
+	Target string
 	//MetaStore (optional) will use meta.NewMemoryMeta if not provided
-	MetaStore m.MetaStore
+	MetaStore meta.MetaStore
 	//Storage (required) storage to download files from
-	Storage   storage.Storage
+	Storage storage.Storage
 	//Reset if set, will wipe up the backend clean before mounting.
-	Reset     bool
+	Reset bool
 
-	Exec      Exec
+	Exec Exec
 }
 
 type G8ufs struct {
@@ -59,6 +55,9 @@ func DefaultExec(name string, arg ...string) Starter {
 
 //Mount mounts fuse with given options, it blocks forever until unmount is called on the given mount point
 func Mount(opt *Options) (*G8ufs, error) {
+	if opt.MetaStore == nil {
+		return nil, fmt.Errorf("missing meta store")
+	}
 	backend := opt.Backend
 	ro := path.Join(backend, "ro")
 	rw := path.Join(backend, "rw")
@@ -71,16 +70,7 @@ func Mount(opt *Options) (*G8ufs, error) {
 		os.MkdirAll(name, 0755)
 	}
 
-	metaStore := opt.MetaStore
-	if metaStore == nil {
-		metaStore = m.NewMemoryMetaStore()
-	}
-
-	if err := m.Populate(metaStore, opt.PList, rw, opt.PListTrim); err != nil {
-		return nil, err
-	}
-
-	fs := rofs.New(opt.Storage, metaStore, ca)
+	fs := rofs.New(opt.Storage, opt.MetaStore, ca)
 
 	server, err := fuse.NewServer(
 		nodefs.NewFileSystemConnector(

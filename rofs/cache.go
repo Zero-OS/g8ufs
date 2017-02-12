@@ -22,8 +22,8 @@ func (fs *filesystem) exists(hash string) bool {
 func (fs *filesystem) checkAndGet(m meta.Meta) (*os.File, error) {
 	//atomic check and download a file
 	name := fs.path(m.Hash())
-	stat := m.Stat()
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, os.ModePerm&os.FileMode(stat.Permissions))
+	info := m.Info()
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, os.ModePerm&os.FileMode(0755))
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (fs *filesystem) checkAndGet(m meta.Meta) (*os.File, error) {
 		return nil, err
 	}
 
-	if fstat.Size() == int64(stat.Size) {
+	if fstat.Size() == int64(info.FileSize) {
 		return f, nil
 	}
 

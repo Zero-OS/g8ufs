@@ -14,6 +14,7 @@ var (
 type NodeType uint32
 
 const (
+	UnknownType     = NodeType(0)
 	DirType         = NodeType(syscall.S_IFDIR)
 	RegularType     = NodeType(syscall.S_IFREG)
 	BlockDeviceType = NodeType(syscall.S_IFBLK)
@@ -23,20 +24,25 @@ const (
 	LinkType        = NodeType(syscall.S_IFLNK)
 )
 
-type MetaData struct {
-	Hash        string // file hash
-	Size        uint64 // file size in bytes
-	Uname       string // username (used for permissions)
-	Uid         uint32
-	Gname       string // groupname (used for permissions)
-	Gid         uint32
-	IsDir       bool
-	Permissions uint32 // perissions (octal style)
-	Ctime       uint64 // creation time
-	Mtime       uint64 // modification time
-	UserKey     string
-	StoreKey    string
-	Inode       uint64
+func (nt NodeType) String() string {
+	switch nt {
+	case DirType:
+		return "dir type"
+	case RegularType:
+		return "file type"
+	case BlockDeviceType:
+		return "block device type"
+	case CharDeviceType:
+		return "char device type"
+	case SocketType:
+		return "socket type"
+	case FIFOType:
+		return "fifo type"
+	case LinkType:
+		return "link type"
+	default:
+		return "unkown type"
+	}
 }
 
 type MetaInfo struct {
@@ -66,7 +72,6 @@ type Meta interface {
 	Hash() string
 	IsDir() bool
 
-	Stat() MetaData //deprecated
 	Info() MetaInfo
 
 	Children() []Meta

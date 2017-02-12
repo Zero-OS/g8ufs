@@ -73,11 +73,6 @@ func (rm *rocksMeta) Hash() string {
 	return "not-implemented-yet"
 }
 
-func (rm *rocksMeta) Stat() MetaData {
-	rm.load()
-	return MetaData{}
-}
-
 func (rm *rocksMeta) Children() []Meta {
 	rm.load()
 	//if that is a file, we must have no children
@@ -137,6 +132,10 @@ func (rm *rocksMeta) Info() MetaInfo {
 	}
 
 	attrs := rm.inode.Attributes()
+	if !attrs.HasData() {
+		log.Fatalf("'%s' attributes is empty", attrs)
+	}
+
 	if attrs.HasFile() {
 		file, _ := attrs.File()
 		info.Type = RegularType
@@ -205,7 +204,7 @@ func (rs *rocksMetaStore) aciFromSlice(slice *rocksdb.Slice) np.ACI {
 }
 
 func (rs *rocksMetaStore) getACI(key string) np.ACI {
-	slice, err := rs.db.Get(rs.ro, key)
+	slice, err := rs.db.Get(rs.ro, []byte(key))
 	if err != nil {
 		log.Fatalf("failed to get ACI (%s) from db: %s", key, err)
 	}
@@ -218,7 +217,7 @@ func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
 		return nil, false
 	}
 	if obj, ok := rs.cache.Get(name); ok {
-		return obj.(*rocksMeta), false
+		return obj.(*rocksMeta), true
 	}
 
 	hash, _ := rs.hash(rs.ns, name)
@@ -243,7 +242,7 @@ func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
 func (rs *rocksMetaStore) Get(name string) (Meta, bool) {
 	/*
 		When we try to hit an object, this object can be either a directory or any other file type.
-		The rocks-db has all values are directories, which means if we try to retrieve an object and we
+		The rocks-db has all values as directories, which means if we try to retrieve an object and we
 		didn't find it, we should try to retrieve it's parent. Then find the file name in that directory entry.
 	*/
 
