@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
-	"syscall"
+	//"syscall"
 )
 
 func (fs *filesystem) path(hash string) string {
@@ -21,36 +21,37 @@ func (fs *filesystem) exists(hash string) bool {
 
 func (fs *filesystem) checkAndGet(m meta.Meta) (*os.File, error) {
 	//atomic check and download a file
-	name := fs.path(m.Hash())
-	info := m.Info()
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, os.ModePerm&os.FileMode(0755))
-	if err != nil {
-		return nil, err
-	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return nil, err
-	}
-
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-
-	fstat, err := f.Stat()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if fstat.Size() == int64(info.FileSize) {
-		return f, nil
-	}
-
-	if err := fs.download(f, m.Hash()); err != nil {
-		f.Close()
-		os.Remove(name)
-		return nil, err
-	}
-
-	f.Seek(0, os.SEEK_SET)
-	return f, nil
+	return nil, nil
+	//name := fs.path(m.Hash())
+	//info := m.Info()
+	//f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, os.ModePerm&os.FileMode(0755))
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	//	return nil, err
+	//}
+	//
+	//defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	//
+	//fstat, err := f.Stat()
+	//
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//if fstat.Size() == int64(info.FileSize) {
+	//	return f, nil
+	//}
+	//
+	//if err := fs.download(f, m.Hash()); err != nil {
+	//	f.Close()
+	//	os.Remove(name)
+	//	return nil, err
+	//}
+	//
+	//f.Seek(0, os.SEEK_SET)
+	//return f, nil
 }
 
 // download file from stor

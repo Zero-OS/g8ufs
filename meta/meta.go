@@ -51,6 +51,7 @@ type MetaInfo struct {
 	ModificationTime uint32
 	ACL              string
 	Type             NodeType
+	Size             uint64
 
 	//Specific Attr
 
@@ -58,7 +59,6 @@ type MetaInfo struct {
 	LinkTarget string
 
 	//File
-	FileSize      uint64
 	FileBlockSize uint8
 
 	//Special
@@ -69,8 +69,8 @@ type Meta interface {
 	fmt.Stringer
 	//base name
 	Name() string
-	Hash() string
 	IsDir() bool
+	Blocks() []string
 
 	Info() MetaInfo
 

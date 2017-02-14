@@ -69,8 +69,28 @@ func (rm *rocksMeta) Name() string {
 	return path.Base(rm.name)
 }
 
-func (rm *rocksMeta) Hash() string {
-	return "not-implemented-yet"
+func (rm *rocksMeta) Blocks() []string {
+	rm.load()
+	var blocks []string
+	if !rm.inode.HasData() {
+		return blocks
+	}
+
+	attrs := rm.inode.Attributes()
+	if !attrs.HasFile() {
+		return blocks
+	}
+	file, _ := attrs.File()
+	if !file.HasBlocks() {
+		return blocks
+	}
+
+	cblocks, _ := file.Blocks()
+	for i := 0; i < cblocks.Len(); i++ {
+		bytes, _ := cblocks.At(i)
+		blocks = append(blocks, string(bytes))
+	}
+	return blocks
 }
 
 func (rm *rocksMeta) Children() []Meta {
@@ -121,6 +141,7 @@ func (rm *rocksMeta) Info() MetaInfo {
 		//that must be a dir.
 		return MetaInfo{
 			Type:             DirType,
+			Size:             rm.dir.Size(),
 			CreationTime:     rm.dir.CreationTime(),
 			ModificationTime: rm.dir.ModificationTime(),
 		}
@@ -139,7 +160,7 @@ func (rm *rocksMeta) Info() MetaInfo {
 	if attrs.HasFile() {
 		file, _ := attrs.File()
 		info.Type = RegularType
-		info.FileSize = rm.inode.Size()
+		info.Size = rm.inode.Size()
 		info.FileBlockSize = file.BlockSize()
 	} else if attrs.HasLink() {
 		link, _ := attrs.Link()
@@ -260,6 +281,7 @@ func (rs *rocksMetaStore) Get(name string) (Meta, bool) {
 		return meta, true
 	}
 
+	log.Debugf("searching children of '%s'", meta.name)
 	//searching the directory contents.
 	if !meta.dir.HasContents() {
 		return nil, false
@@ -272,6 +294,7 @@ func (rs *rocksMetaStore) Get(name string) (Meta, bool) {
 		inode := contents.At(i)
 		nodeName, _ := inode.Name()
 		if nodeName == base {
+			log.Debugf("found %s in children of %s", nodeName, meta.name)
 			nodeMeta := &rocksMeta{
 				name:  name,
 				dir:   meta.dir,
@@ -280,7 +303,7 @@ func (rs *rocksMetaStore) Get(name string) (Meta, bool) {
 			}
 			//cache it
 			rs.cache.Set(name, nodeMeta, cache.DefaultExpiration)
-			return meta, true
+			return nodeMeta, true
 		}
 	}
 

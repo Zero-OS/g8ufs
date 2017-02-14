@@ -46,7 +46,7 @@ func (fs *filesystem) GetAttr(name string, context *fuse.Context) (*fuse.Attr, f
 	mode := uint32(info.Type)
 
 	return &fuse.Attr{
-		Size:  info.FileSize,
+		Size:  info.Size,
 		Mtime: uint64(info.ModificationTime),
 		Mode:  mode | 0755,
 	}, fuse.OK
