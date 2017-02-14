@@ -25,7 +25,7 @@ func NewRocksMeta(ns string, dbpath string) (MetaStore, error) {
 		ns:    ns,
 		db:    db,
 		ro:    rocksdb.NewDefaultReadOptions(),
-		cache: cache.New(5*time.Minute, 30*time.Second),
+		cache: cache.New(5*time.Second, 1*time.Second),
 	}, nil
 }
 
@@ -139,7 +139,7 @@ func (rm *rocksMeta) Info() MetaInfo {
 	if attrs.HasFile() {
 		file, _ := attrs.File()
 		info.Type = RegularType
-		info.FileSize = file.Size()
+		info.FileSize = rm.inode.Size()
 		info.FileBlockSize = file.BlockSize()
 	} else if attrs.HasLink() {
 		link, _ := attrs.Link()
@@ -217,6 +217,7 @@ func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
 		return nil, false
 	}
 	if obj, ok := rs.cache.Get(name); ok {
+		log.Debugf("cache hit for name: '%s' (%d)", name, level)
 		return obj.(*rocksMeta), true
 	}
 
@@ -225,6 +226,7 @@ func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer slice.Free()
 
 	if slice.Size() != 0 {
 		dir := rs.dirFromSlice(slice)
@@ -254,6 +256,7 @@ func (rs *rocksMetaStore) Get(name string) (Meta, bool) {
 
 	//direct hit. we return
 	if meta.name == name {
+		rs.cache.Set(name, meta, cache.DefaultExpiration)
 		return meta, true
 	}
 
@@ -269,10 +272,14 @@ func (rs *rocksMetaStore) Get(name string) (Meta, bool) {
 		inode := contents.At(i)
 		nodeName, _ := inode.Name()
 		if nodeName == base {
-			meta.name = name
-			meta.inode = inode
+			nodeMeta := &rocksMeta{
+				name:  name,
+				dir:   meta.dir,
+				inode: inode,
+				store: rs,
+			}
 			//cache it
-			rs.cache.Set(name, meta, cache.DefaultExpiration)
+			rs.cache.Set(name, nodeMeta, cache.DefaultExpiration)
 			return meta, true
 		}
 	}

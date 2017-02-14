@@ -35,13 +35,10 @@ func (fs *filesystem) GetAttr(name string, context *fuse.Context) (*fuse.Attr, f
 	log.Debugf("GetAttr %s", name)
 	m, ok := fs.store.Get(name)
 	if !ok {
-		log.Debugf("'%s' not found (%s)", name)
 		return nil, fuse.ENOENT
 	}
 
 	info := m.Info()
-
-	log.Debugf("file '%s' of type '%s'", name, info.Type)
 	if info.Type == meta.UnknownType {
 		return nil, fuse.ENOSYS
 	}
