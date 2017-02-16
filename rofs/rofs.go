@@ -7,6 +7,11 @@ import (
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
 	"github.com/op/go-logging"
+	"math"
+)
+
+const (
+	blkSize = 4 * 1024
 )
 
 var (
@@ -45,10 +50,13 @@ func (fs *filesystem) GetAttr(name string, context *fuse.Context) (*fuse.Attr, f
 
 	mode := uint32(info.Type)
 
+	blocks := uint64(math.Ceil(float64(info.Size / blkSize)))
 	return &fuse.Attr{
-		Size:  info.Size,
-		Mtime: uint64(info.ModificationTime),
-		Mode:  mode | 0755,
+		Size:    info.Size,
+		Mtime:   uint64(info.ModificationTime),
+		Mode:    mode | 0755,
+		Blocks:  blocks,
+		Blksize: blkSize, //4K blocks
 	}, fuse.OK
 }
 

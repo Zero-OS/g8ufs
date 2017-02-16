@@ -175,7 +175,7 @@ func (rm *rocksMeta) Info() MetaInfo {
 		file, _ := attrs.File()
 		info.Type = RegularType
 		info.Size = rm.inode.Size()
-		info.FileBlockSize = file.BlockSize()
+		info.FileBlockSize = uint64(file.BlockSize()) * 4096 //Block size is actually the number of 4K blocks in a file
 	} else if attrs.HasLink() {
 		link, _ := attrs.Link()
 		info.Type = LinkType

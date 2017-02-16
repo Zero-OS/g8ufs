@@ -2,13 +2,8 @@ package rofs
 
 import (
 	"github.com/g8os/g8ufs/meta"
-	"io"
 	"os"
 	"path"
-	//"syscall"
-	"github.com/golang/snappy"
-	"github.com/xxtea/xxtea-go/xxtea"
-	"io/ioutil"
 	"syscall"
 )
 
@@ -56,38 +51,13 @@ func (fs *filesystem) checkAndGet(m meta.Meta) (*os.File, error) {
 	return f, nil
 }
 
-func (fs *filesystem) downloadBlock(block meta.BlockInfo, writer io.Writer) error {
-	body, err := fs.storage.Get(string(block.Key))
-	if err != nil {
-		return err
-	}
-
-	defer body.Close()
-
-	data, err := ioutil.ReadAll(body)
-	if err != nil {
-		return err
-	}
-	data = xxtea.Decrypt(data, block.Decipher)
-	raw, err := snappy.Decode(nil, data)
-	if err != nil {
-		return err
-	}
-
-	if _, err := writer.Write(raw); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// download file from stor
+// download file from storage
 func (fs *filesystem) download(file *os.File, m meta.Meta) error {
-	for _, block := range m.Blocks() {
-		if err := fs.downloadBlock(block, file); err != nil {
-			return err
-		}
+	downloader := Downloader{
+		Storage:   fs.storage,
+		BlockSize: m.Info().FileBlockSize,
+		Blocks:    m.Blocks(),
 	}
 
-	return nil
+	return downloader.Download(file)
 }

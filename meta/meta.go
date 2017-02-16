@@ -59,7 +59,7 @@ type MetaInfo struct {
 	LinkTarget string
 
 	//File
-	FileBlockSize uint8
+	FileBlockSize uint64
 
 	//Special
 	SpecialData string
