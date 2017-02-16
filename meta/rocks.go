@@ -2,6 +2,7 @@ package meta
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"github.com/codahale/blake2"
 	"github.com/g8os/g8ufs/cap.np"
@@ -64,14 +65,20 @@ func (rm *rocksMeta) String() string {
 	return rm.name
 }
 
+func (rm *rocksMeta) ID() string {
+	m := md5.New()
+	io.WriteString(m, rm.name)
+	return fmt.Sprintf("%x", m.Sum(nil))
+}
+
 //base name
 func (rm *rocksMeta) Name() string {
 	return path.Base(rm.name)
 }
 
-func (rm *rocksMeta) Blocks() []string {
+func (rm *rocksMeta) Blocks() []BlockInfo {
 	rm.load()
-	var blocks []string
+	var blocks []BlockInfo
 	if !rm.inode.HasData() {
 		return blocks
 	}
@@ -87,9 +94,16 @@ func (rm *rocksMeta) Blocks() []string {
 
 	cblocks, _ := file.Blocks()
 	for i := 0; i < cblocks.Len(); i++ {
-		bytes, _ := cblocks.At(i)
-		blocks = append(blocks, string(bytes))
+		block := cblocks.At(i)
+
+		hash, _ := block.Hash()
+		key, _ := block.Key()
+		blocks = append(blocks, BlockInfo{
+			Key:      hash,
+			Decipher: key,
+		})
 	}
+
 	return blocks
 }
 
@@ -167,6 +181,23 @@ func (rm *rocksMeta) Info() MetaInfo {
 		info.Type = LinkType
 		target, _ := link.Target()
 		info.LinkTarget = target
+	} else if attrs.HasSpecial() {
+		special, _ := attrs.Special()
+		switch special.Type() {
+		case np.Special_Type_block:
+			info.Type = BlockDeviceType
+		case np.Special_Type_chardev:
+			info.Type = CharDeviceType
+		case np.Special_Type_fifopipe:
+			info.Type = FIFOType
+		case np.Special_Type_socket:
+			info.Type = SocketType
+		}
+
+		if special.HasData() {
+			bytes, _ := special.Data()
+			info.SpecialData = string(bytes)
+		}
 	}
 
 	return info

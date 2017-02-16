@@ -38,7 +38,7 @@ func mount(cmd *Cmd, target string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize meta store: %s", err)
 	}
-	aydo, err := storage.NewAydoStorage(u)
+	aydo, err := storage.NewARDBStorage(u)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func main() {
 	flag.BoolVar(&cmd.Reset, "reset", false, "Reset filesystem on mount")
 	flag.StringVar(&cmd.MetaDB, "meta", "", "Path to metadata database (rocksdb)")
 	flag.StringVar(&cmd.Backend, "backend", "/tmp/backend", "Working directory of the filesystem (cache and others)")
-	flag.StringVar(&cmd.URL, "aydo-url", "https://stor.jumpscale.org/stor2/store/ubuntu-g8os-flist/", "Base aydo URL for the plist")
+	flag.StringVar(&cmd.URL, "storage-url", "ardb://home.maxux.net:26379", "Storage url")
 
 	flag.Parse()
 	if flag.NArg() != 1 {

@@ -65,12 +65,18 @@ type MetaInfo struct {
 	SpecialData string
 }
 
+type BlockInfo struct {
+	Key      []byte
+	Decipher []byte
+}
+
 type Meta interface {
 	fmt.Stringer
 	//base name
+	ID() string
 	Name() string
 	IsDir() bool
-	Blocks() []string
+	Blocks() []BlockInfo
 
 	Info() MetaInfo
 

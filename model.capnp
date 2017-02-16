@@ -4,11 +4,16 @@ using Go = import "/go.capnp";
 $Go.package("np");
 $Go.import("github.com/g8os/g8ufs/cap.np");
 
+struct FileBlock {
+    hash @0: Data;  # File hash stored as key on the backend
+    key  @1: Data;  # Encryption key
+}
+
 struct File {
     # blocksize in bytes = blocksize * 4 KB, blocksize is same for all parts of file
     # max blocksize = 128 MB
     blockSize   @0: UInt8;
-    blocks      @1: List(Data);    # list of the hashes of the blocks
+    blocks      @1: List(FileBlock);    # list of the hashes of the blocks
 }
 
 struct Link {
