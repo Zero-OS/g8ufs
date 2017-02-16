@@ -268,6 +268,11 @@ func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
 	if level == 0 {
 		return nil, false
 	}
+
+	if name == "." {
+		name = ""
+	}
+
 	if obj, ok := rs.cache.Get(name); ok {
 		log.Debugf("cache hit for name: '%s' (%d)", name, level)
 		return obj.(*rocksMeta), true

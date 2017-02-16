@@ -67,7 +67,7 @@ func (d *Downloader) worker(ctx context.Context, feed <-chan *DownloadBlock, out
 				Raw:   raw,
 			}
 			if err != nil {
-				log.Errorf("downloading block %d error: %s", blk.Index, err)
+				log.Errorf("downloading block %d error: %s", blk.Index+1, err)
 				result.Err = err
 			}
 			out <- result
@@ -79,7 +79,7 @@ func (d *Downloader) worker(ctx context.Context, feed <-chan *DownloadBlock, out
 func (d *Downloader) writer(output *os.File, expecting int, results <-chan *OutputBlock) error {
 	for i := 0; i < expecting; i++ {
 		result := <-results
-		log.Debugf("got result for block %d", result.Index)
+		log.Debugf("writing result of block %d", result.Index+1)
 		if result.Err != nil {
 			return result.Err
 		}
@@ -119,8 +119,7 @@ func (d *Downloader) Download(output *os.File) error {
 	defer cancel()
 
 	//start workers.
-	log.Debugf("starting %d download workers", workers)
-	for i := 0; i < workers; i++ {
+	for i := 1; i <= workers; i++ {
 		go d.worker(ctx, feed, results)
 	}
 
@@ -130,7 +129,6 @@ func (d *Downloader) Download(output *os.File) error {
 	wg.Add(1)
 	go func() {
 		if err = d.writer(output, len(d.Blocks), results); err != nil {
-			log.Debugf("writer catched an error: %s", err)
 			cancel()
 		}
 
@@ -138,7 +136,6 @@ func (d *Downloader) Download(output *os.File) error {
 	}()
 
 	for i, block := range d.Blocks {
-		log.Debugf("processing block %d (%s)", i, string(block.Key))
 		downloadBlock := &DownloadBlock{
 			BlockInfo: block,
 			Index:     i,
@@ -150,7 +147,6 @@ func (d *Downloader) Download(output *os.File) error {
 		}
 	}
 
-	log.Debugf("wait for writer routine to exit")
 	wg.Wait()
 	return err
 }
