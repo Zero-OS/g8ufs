@@ -12,7 +12,7 @@ struct FileBlock {
 struct File {
     # blocksize in bytes = blocksize * 4 KB, blocksize is same for all parts of file
     # max blocksize = 128 MB
-    blockSize   @0: UInt8;
+    blockSize   @0: UInt16;
     blocks      @1: List(FileBlock);    # list of the hashes of the blocks
 }
 
