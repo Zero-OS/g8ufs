@@ -48,14 +48,19 @@ func (fs *filesystem) GetAttr(name string, context *fuse.Context) (*fuse.Attr, f
 		return nil, fuse.ENOSYS
 	}
 
-	mode := uint32(info.Type)
+	nodeType := uint32(info.Type)
+	access := info.Access
 
 	blocks := uint64(math.Ceil(float64(info.Size / blkSize)))
 	return &fuse.Attr{
-		Size:    info.Size,
-		Mtime:   uint64(info.ModificationTime),
-		Mode:    mode | 0755,
-		Blocks:  blocks,
+		Size:   info.Size,
+		Mtime:  uint64(info.ModificationTime),
+		Mode:   nodeType | access.Mode,
+		Blocks: blocks,
+		Owner: fuse.Owner{
+			Uid: access.UID,
+			Gid: access.GID,
+		},
 		Blksize: blkSize, //4K blocks
 	}, fuse.OK
 }

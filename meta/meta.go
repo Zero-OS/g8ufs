@@ -45,11 +45,17 @@ func (nt NodeType) String() string {
 	}
 }
 
+type Access struct {
+	UID  uint32
+	GID  uint32
+	Mode uint32
+}
+
 type MetaInfo struct {
 	//Common
 	CreationTime     uint32
 	ModificationTime uint32
-	ACL              string
+	Access           Access
 	Type             NodeType
 	Size             uint64
 

@@ -9,7 +9,10 @@ import (
 	"github.com/patrickmn/go-cache"
 	rocksdb "github.com/tecbot/gorocksdb"
 	"io"
+	"os"
+	"os/user"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 	"zombiezen.com/go/capnproto2"
@@ -151,19 +154,29 @@ func (rm *rocksMeta) Children() []Meta {
 
 func (rm *rocksMeta) Info() MetaInfo {
 	rm.load()
+
 	if !rm.inode.HasData() {
 		//that must be a dir.
+
+		aciKey, _ := rm.dir.Aclkey()
+		access := rm.store.getAccess(aciKey)
+
 		return MetaInfo{
 			Type:             DirType,
 			Size:             rm.dir.Size(),
 			CreationTime:     rm.dir.CreationTime(),
 			ModificationTime: rm.dir.ModificationTime(),
+			Access:           access,
 		}
 	}
+
+	aciKey, _ := rm.inode.Aclkey()
+	access := rm.store.getAccess(aciKey)
 
 	info := MetaInfo{
 		CreationTime:     rm.inode.CreationTime(),
 		ModificationTime: rm.inode.ModificationTime(),
+		Access:           access,
 	}
 
 	attrs := rm.inode.Attributes()
@@ -256,12 +269,47 @@ func (rs *rocksMetaStore) aciFromSlice(slice *rocksdb.Slice) np.ACI {
 }
 
 func (rs *rocksMetaStore) getACI(key string) np.ACI {
+	if aci, ok := rs.cache.Get(key); ok {
+		return aci.(np.ACI)
+	}
+
 	slice, err := rs.db.Get(rs.ro, []byte(key))
 	if err != nil {
 		log.Fatalf("failed to get ACI (%s) from db: %s", key, err)
 	}
 
-	return rs.aciFromSlice(slice)
+	aci := rs.aciFromSlice(slice)
+	rs.cache.Set(key, aci, cache.DefaultExpiration)
+
+	return aci
+}
+
+func (rs *rocksMetaStore) getAccess(key string) Access {
+	aci := rs.getACI(key)
+	uname, _ := aci.Uname()
+	gname, _ := aci.Gname()
+	mode := uint32(aci.Mode())
+
+	uid := 1000
+	gid := 1000
+
+	if u, err := user.Lookup(uname); err == nil {
+		if id, err := strconv.ParseInt(u.Uid, 10, 32); err != nil {
+			uid = int(id)
+		}
+	}
+
+	if g, err := user.LookupGroup(gname); err == nil {
+		if id, err := strconv.ParseInt(g.Gid, 10, 32); err != nil {
+			gid = int(id)
+		}
+	}
+
+	return Access{
+		Mode: uint32(os.ModePerm) & mode,
+		UID:  uint32(uid),
+		GID:  uint32(gid),
+	}
 }
 
 func (rs *rocksMetaStore) get(name string, level int) (*rocksMeta, bool) {
