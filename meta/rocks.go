@@ -269,7 +269,8 @@ func (rs *rocksMetaStore) aciFromSlice(slice *rocksdb.Slice) np.ACI {
 }
 
 func (rs *rocksMetaStore) getACI(key string) np.ACI {
-	if aci, ok := rs.cache.Get(key); ok {
+	cKey := fmt.Sprintf("accesskey.%x", key)
+	if aci, ok := rs.cache.Get(cKey); ok {
 		return aci.(np.ACI)
 	}
 
@@ -279,7 +280,7 @@ func (rs *rocksMetaStore) getACI(key string) np.ACI {
 	}
 
 	aci := rs.aciFromSlice(slice)
-	rs.cache.Set(key, aci, cache.DefaultExpiration)
+	rs.cache.Set(cKey, aci, cache.DefaultExpiration)
 
 	return aci
 }
