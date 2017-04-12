@@ -43,6 +43,7 @@ type Options struct {
 
 type G8ufs struct {
 	target string
+	fuse   string
 	server *fuse.Server
 }
 
@@ -121,12 +122,15 @@ func Mount(opt *Options) (*G8ufs, error) {
 	return &G8ufs{
 		target: opt.Target,
 		server: server,
+		fuse:   ro,
 	}, nil
 }
 
 //Wait filesystem until it's unmounted.
 func (fs *G8ufs) Wait() error {
-	defer fs.server.Unmount()
+	defer func() {
+		fs.umountFuse()
+	}()
 	//Wait for filesystem to be unmounted.
 	fd, err := syscall.InotifyInit()
 	if err != nil {
@@ -153,6 +157,14 @@ func (e errors) Error() string {
 	return fmt.Sprint(e...)
 }
 
+func (fs *G8ufs) umountFuse() error {
+	if err := syscall.Unmount(fs.fuse, syscall.MNT_FORCE|syscall.MNT_DETACH); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (fs *G8ufs) Unmount() error {
 	var errs errors
 
@@ -160,8 +172,9 @@ func (fs *G8ufs) Unmount() error {
 		errs = append(errs, err)
 	}
 
-	if err := fs.server.Unmount(); err != nil {
+	if err := fs.umountFuse(); err != nil {
 		errs = append(errs, err)
 	}
+
 	return errs
 }
