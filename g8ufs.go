@@ -44,7 +44,6 @@ type Options struct {
 type G8ufs struct {
 	target string
 	server *fuse.Server
-	cmd    Starter
 }
 
 //Mount mounts fuse with given options, it blocks forever until unmount is called on the given mount point
@@ -53,11 +52,12 @@ func Mount(opt *Options) (*G8ufs, error) {
 		return nil, fmt.Errorf("missing meta store")
 	}
 	backend := opt.Backend
-	ro := path.Join(backend, "ro")
-	rw := path.Join(backend, "rw")
-	ca := path.Join(backend, "ca")
+	ro := path.Join(backend, "ro") //ro lower layer provided by fuse
+	rw := path.Join(backend, "rw") //rw upper layer on filyestem
+	ca := path.Join(backend, "ca") //ca cache for downloaded files used by fuse
+	wd := path.Join(backend, "wd") //wd workdir used by overlayfs
 
-	for _, name := range []string{ro, rw, ca} {
+	for _, name := range []string{ro, rw, ca, wd} {
 		if opt.Reset {
 			os.RemoveAll(name)
 		}
@@ -85,19 +85,18 @@ func Mount(opt *Options) (*G8ufs, error) {
 
 	log.Debugf("Fuse mount is complete")
 
-	branch := fmt.Sprintf("%s=RW:%s=RO", rw, ro)
+	err = syscall.Mount("overlay",
+		opt.Target,
+		"overlay",
+		syscall.MS_NOATIME,
+		fmt.Sprintf(
+			"lowerdir=%s,upperdir=%s,workdir=%s",
+			ro, rw, wd,
+		),
+	)
 
-	cmd := exec.Command("unionfs", "-f",
-		"-o", "cow",
-		"-o", "allow_other",
-		"-o", "suid",
-		"-o", "dev",
-		"-o", "default_permissions",
-		"-o", "attr_timeout=0",
-		"-o", "entry_timeout=0",
-		branch, opt.Target)
-
-	if err := cmd.Start(); err != nil {
+	if err != nil {
+		server.Unmount()
 		return nil, err
 	}
 
@@ -115,9 +114,6 @@ func Mount(opt *Options) (*G8ufs, error) {
 	}
 
 	if !success {
-		if cmd.Process != nil {
-			cmd.Process.Kill()
-		}
 		server.Unmount()
 		return nil, fmt.Errorf("failed to start mount")
 	}
@@ -125,14 +121,30 @@ func Mount(opt *Options) (*G8ufs, error) {
 	return &G8ufs{
 		target: opt.Target,
 		server: server,
-		cmd:    cmd,
 	}, nil
 }
 
 //Wait filesystem until it's unmounted.
 func (fs *G8ufs) Wait() error {
 	defer fs.server.Unmount()
-	return fs.cmd.Wait()
+	//Wait for filesystem to be unmounted.
+	fd, err := syscall.InotifyInit()
+	if err != nil {
+		return err
+	}
+
+	defer syscall.Close(fd)
+
+	if _, err := syscall.InotifyAddWatch(fd, fs.target, syscall.IN_UNMOUNT); err != nil {
+		return err
+	}
+
+	buff := make([]byte, syscall.SizeofInotifyEvent)
+	if _, err := syscall.Read(fd, buff); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type errors []interface{}
