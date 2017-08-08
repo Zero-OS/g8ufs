@@ -36,7 +36,8 @@ type Options struct {
 	Cache string
 	//Mount (required) is the mount point
 	Target string
-	//MetaStore (optional) will use meta.NewMemoryMeta if not provided
+	//MetaStore (optional), if not provided `Reset` flag will have no effect, and only the backend overlay
+	//will be mount at target, allows *full* backups of the backend to be mounted.
 	MetaStore meta.MetaStore
 	//Storage (required) storage to download files from
 	Storage storage.Storage

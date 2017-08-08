@@ -138,7 +138,7 @@ func main() {
 	var version bool
 	flag.BoolVar(&version, "version", false, "Print version and exit")
 	flag.BoolVar(&cmd.Reset, "reset", false, "Reset filesystem on mount")
-	flag.StringVar(&cmd.MetaDB, "meta", "", "Path to metadata database (rocksdb)")
+	flag.StringVar(&cmd.MetaDB, "meta", "", "Path to metadata database (optional)")
 	flag.StringVar(&cmd.Backend, "backend", "/tmp/backend", "Working directory of the filesystem (cache and others)")
 	flag.StringVar(&cmd.Cache, "cache", "", "Optional external (common) cache directory, if not provided a temporary cache location will be created under `backend`")
 	flag.StringVar(&cmd.URL, "storage-url", "ardb://hub.gig.tech:16379", "Storage url")
