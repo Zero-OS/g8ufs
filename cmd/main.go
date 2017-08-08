@@ -28,14 +28,7 @@ type Cmd struct {
 }
 
 func (c *Cmd) Validate() []error {
-	var errors []error
-	if c.MetaDB == "" {
-		errors = append(errors,
-			fmt.Errorf("meta is required"),
-		)
-	}
-
-	return errors
+	return nil
 }
 
 func mount(cmd *Cmd, target string) error {
@@ -46,27 +39,32 @@ func mount(cmd *Cmd, target string) error {
 
 	// Test if the meta path is a directory
 	// if not, it's maybe a flist/tar.gz
-	f, err := os.Open(cmd.MetaDB)
-	if err != nil {
-		return err
-	}
-	info, err := f.Stat()
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		err = unpack(f, cmd.MetaDB+".d")
+
+	var store meta.MetaStore
+	if len(cmd.MetaDB) != 0 {
+		f, err := os.Open(cmd.MetaDB)
 		if err != nil {
-			log.Error(err)
-		} else {
-			cmd.MetaDB = cmd.MetaDB + ".d"
+			return err
+		}
+		info, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			err = unpack(f, cmd.MetaDB+".d")
+			if err != nil {
+				log.Error(err)
+			} else {
+				cmd.MetaDB = cmd.MetaDB + ".d"
+			}
+		}
+
+		store, err = meta.NewRocksMeta("", cmd.MetaDB)
+		if err != nil {
+			return fmt.Errorf("failed to initialize meta store: %s", err)
 		}
 	}
 
-	store, err := meta.NewRocksMeta("", cmd.MetaDB)
-	if err != nil {
-		return fmt.Errorf("failed to initialize meta store: %s", err)
-	}
 	aydo, err := storage.NewARDBStorage(u)
 	if err != nil {
 		return err
