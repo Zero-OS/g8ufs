@@ -67,7 +67,7 @@ func Mount(opt *Options) (*G8ufs, error) {
 	}
 
 	for _, name := range toSetup {
-		if opt.Reset {
+		if opt.MetaStore != nil && opt.Reset {
 			os.RemoveAll(name)
 		}
 		os.MkdirAll(name, 0755)
