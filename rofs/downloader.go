@@ -57,7 +57,7 @@ func (d *Downloader) DownloadBlock(block meta.BlockInfo) ([]byte, error) {
 func (d *Downloader) worker(ctx context.Context, feed <-chan *DownloadBlock, out chan<- *OutputBlock) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Errorf("recover from panic: %s", err)
+			log.Warningf("cancel block download: %s", err)
 		}
 	}()
 
