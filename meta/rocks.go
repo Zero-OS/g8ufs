@@ -69,7 +69,7 @@ func (rm *rocksMeta) load() {
 
 func (rm *rocksMeta) IsDir() bool {
 	rm.load()
-	return !rm.inode.HasData()
+	return rm.inode.Attributes().Which() == np.Inode_attributes_Which_dir
 }
 
 func (rm *rocksMeta) String() string {
