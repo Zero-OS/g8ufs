@@ -2,8 +2,9 @@ package meta
 
 import (
 	"fmt"
-	"github.com/op/go-logging"
 	"syscall"
+
+	"github.com/op/go-logging"
 )
 
 var (
