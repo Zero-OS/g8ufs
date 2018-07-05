@@ -222,7 +222,7 @@ func (s *rocksStore) get(p string) (Meta, error) {
 func (s *rocksStore) Get(path string) (Meta, bool) {
 	meta, err := s.get(path)
 	if err != nil {
-		log.Errorf("cannot resolve %s: %s", path, err)
+		log.Debugf("cannot resolve %s: %s", path, err)
 		return nil, false
 	}
 	return meta, true
