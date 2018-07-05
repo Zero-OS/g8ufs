@@ -8,7 +8,9 @@ import (
 )
 
 var (
-	log         = logging.MustGetLogger("meta")
+	log = logging.MustGetLogger("meta")
+
+	//ErrNotFound in case of an entry miss
 	ErrNotFound = fmt.Errorf("not found")
 )
 

@@ -8,8 +8,10 @@ import (
 	"os/user"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/codahale/blake2"
+	"github.com/patrickmn/go-cache"
 	rocksdb "github.com/tecbot/gorocksdb"
 	np "github.com/zero-os/0-fs/cap.np"
 	"zombiezen.com/go/capnproto2"
@@ -40,9 +42,10 @@ func NewRocksStore(ns, p string) (MetaStore, error) {
 	ro := rocksdb.NewDefaultReadOptions()
 
 	return &rocksStore{
-		db: db,
-		ro: ro,
-		ns: ns,
+		db:    db,
+		ro:    ro,
+		ns:    ns,
+		cache: cache.New(60*time.Second, 20*time.Second),
 	}, nil
 }
 
@@ -50,6 +53,8 @@ type rocksStore struct {
 	db *rocksdb.DB
 	ro *rocksdb.ReadOptions
 	ns string
+
+	cache *cache.Cache
 }
 
 func (s *rocksStore) hash(path string) string {
@@ -172,23 +177,46 @@ func (s *rocksStore) getDirWithHash(hash string) (*Dir, error) {
 }
 
 func (s *rocksStore) get(p string) (Meta, error) {
+	if m, ok := s.cache.Get(p); ok {
+		return m.(Meta), nil
+	}
+
 	dir, err := s.getDir(p)
 	if err == nil {
+		s.cache.Set(p, dir, cache.DefaultExpiration)
 		return dir, nil
 	}
 
-	parent, err := s.getDir(path.Dir(p))
+	if p == "" {
+		//Should not reach here, unless flist is broken
+		//avoid inifinte recursion
+		return nil, ErrNotFound
+	}
+
+	parentPath := path.Dir(p)
+	if parentPath == "." {
+		parentPath = ""
+	}
+
+	parent, err := s.get(parentPath)
 	if err != nil {
 		return nil, err
 	}
+
 	name := path.Base(p)
+	var meta Meta
 	for _, child := range parent.Children() {
 		if child.Name() == name {
-			return child, nil
+			meta = child
 		}
+		s.cache.Set(path.Join(parentPath, child.Name()), child, cache.DefaultExpiration)
 	}
 
-	return nil, io.EOF
+	if meta != nil {
+		return meta, nil
+	}
+
+	return nil, ErrNotFound
 }
 
 func (s *rocksStore) Get(path string) (Meta, bool) {
