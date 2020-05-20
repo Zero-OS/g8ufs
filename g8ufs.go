@@ -52,7 +52,7 @@ type G8ufs struct {
 	*rofs.Config
 	target string
 	fuse   string
-	w sync.WaitGroup
+	w      sync.WaitGroup
 }
 
 //Mount mounts fuse with given options, it blocks forever until unmount is called on the given mount point
@@ -75,6 +75,15 @@ func Mount(opt *Options) (*G8ufs, error) {
 			os.RemoveAll(name)
 		}
 		os.MkdirAll(name, 0755)
+	}
+
+	// The working directory (workdir) needs to be an empty directory on the same filesystem mount as the upper directory.
+	// https://wiki.archlinux.org/index.php/Overlay_filesystem
+	if err := os.RemoveAll(wd); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(wd, 0755); err != nil {
+		return nil, err
 	}
 
 	cfg := rofs.NewConfig(opt.Storage, opt.MetaStore, ca)
